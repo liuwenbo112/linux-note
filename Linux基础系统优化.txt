@@ -1,0 +1,473 @@
+### Linux基础系统优化
+
+https://www.cnblogs.com/pyyu/articles/9355477.html
+
+ifconfig　　查询、设置网卡和ip等参数
+ifup,ifdown    脚本命令，更简单的方式启动关闭网络
+ip　　符合指令，直接修改上述功能
+
+##### 1、创建普通用户
+
+```
+useradd  用户名   存放用户信息到/etc/passwd
+passwd  用户名   给指定用户修改密码。如果不指定用户，修改当前登录的用户密码
+```
+
+
+
+##### 2、切换用户
+
+```
+su - 用户名   - 代表完全切换
+
+退出： exit
+```
+
+
+
+##### 3、删除用户
+
+```
+-f     强制删除用户
+-r    同事删除用户以及家目录
+userdel -rf 用户名 
+```
+
+##### 4、linux命令提示符的PS1变量
+
+```
+修改命令提示符，添加 绝对路径和时间
+PS1="[\u@\h \w \t]\$"  小写w  绝对路径   大写W  相对路径
+```
+
+##### 5、添加用户组
+
+```
+groupadd it_dep
+```
+
+##### 6、sudo 指令
+
+	作用：sudo命令用来以其他身份来执行命令，预设的身份为root。
+	编辑/etc/sudoers文件，找到下面这一行配置
+	## Allow root to run any commands anywhere 下 添加：
+		
+	用户名 ALL=(ALL) ALL
+		
+	在/etc/sudoers中设置了可执行sudo指令的用户。若其未经授权的用户企图使用sudo，则会发出警告的邮件给管理员。
+	用户使用sudo时，必须先输入密码，之后有5分钟的有效期限，超过期限则必须重新输入密码。
+	
+	visudo 可直接修改文件，并且可以检测语法是否正确
+
+##### 7、修改主机名
+
+	hostnamectl set-hostname 新主机名  然后重启
+
+##### 8、文件和目录权限
+
+```
+-rw-r--r-- 1 mysql mysql 6735642 8月  11 14:19 /var/log/mysqld.log
+-rw-r--r--  ：第一个 - 表示为文件（d为文件夹），后续9个字母，每3个一组，第一组是user组，第二组是group 			   组，第三组是others组，是三种身份的权限；
+			  r :read 可读，w : write 可写， x:表示可执行
+			  这里距离说明是user组可读可写，group组只读，others组只读
+			  
+1  ：表示文件链接数
+mysql ：文件拥有者-属主 rw-
+mysql ：文件拥有组-属组 r--
+6735642 ： 文件大小
+8月  11 14:19 ：最后一次被修改的时间日期
+/var/log/mysqld.log ：文件路径名
+
+对普通文件的可读可写可执行的命令：
+	r    read可读，可以用cat等命令查看
+    w    write写入，可以编辑或者删除这个文件
+    x    executable    可以执行
+    可读：cat 、vi 、more、 less、 head 、tail、 tac
+    可写：echo、vi >重定向符号
+    可执行：二进制程序，可以运行的程序
+    
+对文件夹的可读可写可执行命令：
+	r    可以对此目录执行ls列出所有文件
+    w    可以在这个目录创建文件
+    x    可以cd进入这个目录，或者查看详细信息
+    
+    
+    
+       权限分配         读               写                执行
+       字符表示         r                w                 x
+       数字表示         4                2                 1
+权限分配转化
+rwxrwxrwx   777   7 = r+w+r ======== 4+2+1   严格按照rwx的顺序，如果中间没有w,则用-代替，即为r-x
+```
+
+##### 9、修改文件权限属性
+
+```
+普通用户只能修改自己的文件名，时间与权限（注意）因此修改其他用户权限，只能用最nb的root用户
+```
+
+###### 1、修改文档权限的命令
+
+```
+chmod [身份]　　     [参数] 　 　 [文件]　　　　
+     u(user)　　    +(添加)　　　　　　
+     g(group)　     -(减去)　　　　
+     o(other)　　   =(赋值)　　　　
+     a(all)
+举例：  
+    当前权限
+    -rw-rw-r-- 1 root root 0 8月  11 16:41 pyyu.txt
+    方法1
+    减去属主的写权限
+    chmod u-w pyyu.txt
+    
+    方法2
+    属主添加可读可写可执行权限
+    chmod 700 pyyu.txt
+
+    属主可读可写可执行
+    属组可读可执行
+    其他人可读可执行
+    chmod 755 pyyu.txt
+```
+
+###### 2、修改文件属组
+
+```
+chgrp 指令
+举例：
+    -rw-rw-r-- 1 root pyyu 0 8月  11 16:41 pyyu.txt
+    [root@oldboy_python /tmp 16:44:59]#chgrp root pyyu.txt 
+    [root@oldboy_python /tmp 16:45:51]#ll pyyu.txt 
+    -rw-rw-r-- 1 root root 0 8月  11 16:41 pyyu.txt
+```
+
+###### 3、修改文件属主
+
+```
+chown 指令
+[root@oldboy_python /tmp 16:43:12]#chown root pyyu.txt 
+[root@oldboy_python /tmp 16:43:42]#ll pyyu.txt 
+-rw-rw-r-- 1 root pyyu 0 8月  11 16:41 pyyu.txt
+```
+
+##### 10、软连接配置
+
+```
+软连接也叫做符号链接，类似于windows的快捷方式
+ln -s 目标文件  软连接名
+这里找文件不能用相对路径
+1.存在文件/tmp/test.txt
+[root@master tmp]# ls -l
+-rw-r--r-- 1 root root     10 10月 15 21:23 test.txt
+
+2.在/home目录中建立软连接，指向/tmp/test.txt文件
+ln -s /tmp/test.txt my_test
+
+3.查看软连接信息
+lrwxrwxrwx 1 root root 13 10月 15 21:35 my_test -> /tmp/test.txt
+
+4.通过软连接查看文件
+cat my_test
+
+my_test只是/tmp/test.txt的一个别名，因此删除my_test不会影响/tmp/test.txt，但是删除了本尊，
+快捷方式就无意义不存在了
+```
+
+##### 11、压缩解压
+
+```
+tar 命令
+参数：
+	-c  压缩参数
+	-x  解压参数
+	-v  显示过程
+	-f  指定文件 这个参数要写在最后
+	-z  解压gzip的压缩解压格式，以gz结尾的压缩包，这个参数要放在最前面
+	-C  指定解压的文件存放的目录 -C 指定存放的文件目录
+	举例：tar -cf all_pic.tar *.jpg #压缩当前目录所有jpg结尾的压缩为all_pic.tar
+		 tar -xjf xx.tar.bz2　　#解压缩bz2结尾的文件
+		 解压缩xx.tar.bz2到指定存放的文件目录
+		 tar -xjf xx.tar.bz2　-C  指定存放的文件目录
+		 
+	用绝对路径
+```
+
+##### 12、查看网络端口
+
+```
+ps -ef | grep 查看任务是否有进程（条件）
+netstart -tunlp | grep  查看任务的端口是否启动（条件）
+
+netstat命令用来打印Linux中网络系统的状态信息，可让你得知整个Linux系统的网络情况。
+netstat 
+[选项]
+    -t或--tcp：显示TCP传输协议的连线状况；
+    -u或--udp：显示UDP传输协议的连线状况；
+    -n或--numeric：直接使用ip地址，而不通过域名服务器；
+    -l或--listening：显示监控中的服务器的Socket；
+    -p或--programs：显示正在使用Socket的程序识别码和程序名称；
+    -a或--all：显示所有连线中的Socket；
+来自同一个机器的三个ip:
+0.0.0.0			本机访问127.0.0.1 外部机器访问192.168.12.13
+127.0.0.1       本机回环地址，代表机器内部一个ip,只允许自己访问，且每个人都有自己的127.0.0.1
+192.168.12.13   本地对外可以提供访问的ip地址，每台机器都不一样
+```
+
+##### 13、软件防火墙
+
+```
+centos7默认已经使用firewall作为防火墙了
+1.关闭防火墙
+systemctl status firewalld #查看防火墙状态
+systemctl stop firewalld    #关闭防火墙
+systemctl disable firewalld#关闭防火墙开机启动
+systemctl is-enabled firewalld.service#检查防火墙是否启动
+```
+
+##### 14、Linux中文显示设置（防止中文乱码）
+
+```
+#查看系统当前字符集
+echo $LANG
+locale
+#命令修改字符集
+# vim /etc/profile.d/locale.sh
+export LC_CTYPE=zh_CN.UTF-8
+export LC_ALL=zh_CN.UTF-8
+# vim /etc/locale.conf
+LANG=zh_CN.UTF-8
+
+# vim /etc/sysconfig/i18n
+LANG=zh_CN.UTF-8
+
+# vim /etc/environment
+LANG=zh_CN.UTF-8
+LC_ALL=zh_CN.UTF-8
+
+英文版本
+# vim /etc/profile.d/locale.sh
+export LC_CTYPE=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+# vim /etc/locale.conf
+LANG=en_US.UTF-8
+
+# vim /etc/sysconfig/i18n
+LANG=en_US.UTF-8
+
+# vim /etc/environment
+LANG=en_US.UTF-8
+LC_ALL=en_US.UTF-8
+```
+
+##### 15、tree指令
+
+```
+tree命令以树状图列出目录的内容。
+
+-a：显示所有文件和目录；
+-A：使用ASNI绘图字符显示树状图而非以ASCII字符组合；
+-C：在文件和目录清单加上色彩，便于区分各种类型；
+-d：先是目录名称而非内容；
+-D：列出文件或目录的更改时间；
+-f：在每个文件或目录之前，显示完整的相对路径名称；
+-F：在执行文件，目录，Socket，符号连接，管道名称名称，各自加上"*"，"/"，"@"，"|"号；
+-g：列出文件或目录的所属群组名称，没有对应的名称时，则显示群组识别码；
+-i：不以阶梯状列出文件和目录名称；
+-l：<范本样式> 不显示符号范本样式的文件或目录名称；
+-l：如遇到性质为符号连接的目录，直接列出该连接所指向的原始目录；
+-n：不在文件和目录清单加上色彩；
+-N：直接列出文件和目录名称，包括控制字符；
+-p：列出权限标示；
+-P：<范本样式> 只显示符合范本样式的文件和目录名称；
+-q：用“？”号取代控制字符，列出文件和目录名称；
+-s：列出文件和目录大小；
+-t：用文件和目录的更改时间排序；
+-u：列出文件或目录的拥有者名称，没有对应的名称时，则显示用户识别码；
+-x：将范围局限在现行的文件系统中，若指定目录下的某些子目录，其存放于另一个文件系统上，则将该目录予以排除在寻找范围外。
+```
+
+##### 16、DNS
+
+```
+DNS（Domain Name System，域名系统），万维网上作为域名和IP地址相互映射的一个分布式数据库，能够使用户更方便的访问互联网，而不用去记住能够被机器直接读取的IP数串。
+通过域名，最终得到该域名对应的IP地址的过程叫做域名解析（或主机名解析）
+```
+
+```
+查看Linux的dns，唯一配置文件
+配置文件
+cat /etc/resolv.conf
+#dns服务器地址
+nameserver 119.29.29.29
+nameserver 223.5.5.5
+
+本地强制dns解析文件/etc/hosts
+指定本地解析：
+/etc/hosts
+主机IP    主机名    主机别名
+127.0.0.1        www.pyyuc.cn    
+
+nslookup命令
+nslookup命令是常用域名查询工具，就是查DNS信息用的命令。
+nslookup4有两种工作模式，即“交互模式”和“非交互模式”。在“交互模式”下，用户可以向域名服务器查询各类主机、域名的信息，或者输出域名中的主机列表。而在“非交互模式”下，用户可以针对一个主机或域名仅仅获取特定的名称或所需信息。
+
+进入交互模式，直接输入nslookup命令，不加任何参数，则直接进入交互模式，此时nslookup会连接到默认的域名服务器（即/etc/resolv.conf的第一个dns地址）。或者输入nslookup -nameserver/ip。进入非交互模式，就直接输入nslookup 域名就可以了。
+
+#解析
+nslookup www.oldboyedu.com
+```
+
+##### 17、计划任务crond服务
+
+```
+什么是计划任务：
+后台运行，到了预定的时间就会自动执行的任务，前提是：事先手动将计划任务设定好。这就用到了crond服务
+
+crontab命令被用来提交和管理用户的需要周期性执行的任务，与windows下的计划任务类似
+
+crontab （选项）（参数）
+-e：编辑该用户的计时器设置；
+-l：列出该用户的计时器设置；
+-r：删除该用户的计时器设置；
+-u<用户名称>：指定要设定计时器的用户名称。
+
+```
+
+```
+在home家目录（~）下的/etc目录下有一个crontab文件，这个就是系统任务调度的配置文件
+SHELL=/bin/bash
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=root
+
+# For details see man 4 crontabs
+
+# Example of job definition:
+# .---------------- minute (0 - 59)
+# |  .------------- hour (0 - 23)
+# |  |  .---------- day of month (1 - 31)
+# |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+# |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon,tue,wed,thu,fri,sat
+# |  |  |  |  |
+# *  *  *  *  * user-name  command to be executed　
+
+crontab任务配置基本格式：
+分  时  日  月  周    命令
+*   *　 *　 *　 *　　要计划执行的命令
+
+分钟(0-59)　小时(0-23)　日期(1-31)　月份(1-12)　星期(0-6,0代表星期天)　 命令
+
+星号（*）：代表所有可能的值，例如month字段如果是星号，则表示在满足其它字段的制约条件后每月都执行该命令操作。
+30 8 * * *  每天8.30去上班  
+
+逗号（,）：可以用逗号隔开的值指定一个列表范围，例如，“1,2,5,7,8,9”
+
+中杠（-）：可以用整数之间的中杠表示一个整数范围，例如“2-6”表示“2,3,4,5,6”
+
+正斜线（/）：可以用正斜线指定时间的间隔频率，例如“0-23/2”表示每两小时执行一次。同时正斜线可以和星号一起使用，
+例如
+    */10，如果用在minute字段，表示每十分钟执行一次。
+    
+	
+	每小时的3，15分钟执行命令：
+	3,15 * * * *  命令
+	
+	在8到11点的3，15分钟执行命令：
+	3,15 8-11 * * *  命令
+	
+	每晚的21：30执行命令：
+	30 21 * * *  命令
+	
+	每周六的1：30执行命令：
+	30  1  *  *  6,7  命令
+	
+	每周一到周五的凌晨1点，清空/tmp目录的所有文件，0表示整点
+	0 1 * * 1-5 /usr/bin/rm -rf /tmp/*
+	
+	每隔三分钟执行下时间同步
+	*/3 * * * * /usr/sbin/ntpdate ntp1.aliyun.com  
+	
+	
+注意：写计划任务的时候必须写绝对路径
+```
+
+##### 18、软件包管理
+
+###### 1、源码包格式
+
+```
+举例：
+
+1、下载python3的源码包
+
+2、解压缩源码包，切换目录
+
+3、编译且安装
+
+4、配置环境变量
+
+5、使用python3
+```
+
+###### 2、rpm二进制包格式
+
+```
+1、下载软件的rpm格式包
+
+2、rpm -ivh lrzsz
+
+3、使用lrzsz工具
+
+lrzs是软件包的名字，提供了命令是：
+							rz:接收文件
+							sz:发送文件
+```
+
+###### 3、yum安装方式
+
+```
+yum工具，自动的搜索下载rpm包，且安装，且解决依赖关系，自动处理下载其他的依赖rpm包
+
+#进入yum源目录
+cd /etc/yum.repos.d/
+#查看yum源文件
+ls -l
+在这个目录下，只有以 .repo结尾的文件，才会被识别为yum库
+配置国内的yum源：
+	1、在/etc/yum.repos.d/目录底下，定制我们自己的repo仓库文件
+	2、去拿第三方的 yum 仓库 （https://opsx.alibaba.com/mirror）
+	3、下载阿里巴巴的yum仓库文件
+wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-6.repo
+	wget下载文件后，-O参数，表示放到某个指定目录且改名
+	4、清除yum缓存  yum clean all
+	5、生成新的阿里云的yum软件缓存  yum makecache
+	
+再配置epel额外第三方软件的仓库源，例如 redis mysql nginx
+	1、配置epel
+	wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-6.repo
+	2、生成yum缓存
+	yum makecache
+	3、使用yum工具
+	
+例如
+1、安装 nginx 
+	yum install nginx -y
+2、启动 nginx
+	nginx
+3、修改nginx页面，文件名字叫/nginx/index.html/
+
+
+```
+
+##### 19、系统服务管理命令
+
+```
+只用通过yum安装的软件，才可以利用系统服务管理命令。
+Centos 6用service命令 
+service 指令 **
+	作用：用于控制一些软件的服务启动/停止/重启,在超级用户root中运行
+	语法：service 服务名 start/stop/restart
+
+```
+
